@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dasol Tourism Guide</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #101f73;
+      --navy-2: #071449;
+      --gold: #f5c72d;
+      --red: #d94a38;
+      --paper: #f4f6fa;
+      --surface: #ffffff;
+      --ink: #172033;
+      --muted: #747d91;
+      --line: #dde2ec;
+      --shadow: 0 8px 24px rgba(29, 43, 87, .10);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: "Manrope", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { height: 100%; display: grid; grid-template-rows: 72px minmax(0, 1fr); }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 18px;
+      color: white;
+      background: var(--navy-2);
+      border-bottom: 3px solid var(--gold);
+      z-index: 1000;
+    }
+
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(255, 255, 255, .72);
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy-2);
+      font-weight: 800;
+      box-shadow: 0 0 0 3px rgba(245, 199, 45, .18);
+    }
+
+    .brand { min-width: 0; flex: 1; }
+    .brand h1 { margin: 0; font-size: 17px; line-height: 1.1; letter-spacing: -.02em; }
+    .brand p { margin: 4px 0 0; color: #cfd5ed; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
+
+    .header-actions { display: flex; gap: 8px; }
+    .action {
+      min-height: 38px;
+      border: 0;
+      border-radius: 7px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .action.primary { background: var(--gold); color: var(--navy-2); }
+    .action.secondary { background: var(--red); color: white; }
+
+    main { min-height: 0; display: grid; grid-template-columns: 390px minmax(0, 1fr); }
+
+    aside {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      background: var(--paper);
+      border-right: 1px solid var(--line);
+      z-index: 500;
+    }
+
+    .controls { padding: 14px 14px 10px; background: var(--surface); border-bottom: 1px solid var(--line); }
+
+    .search-wrap { position: relative; }
+    .search-wrap span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .search {
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 0 12px 0 38px;
+      outline: none;
+      color: var(--ink);
+      background: #fafbfe;
+    }
+    .search:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(16, 31, 115, .08); }
+
+    .chip-row {
+      display: flex;
+      gap: 7px;
+      margin-top: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .chip-row::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: none;
+      height: 32px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: white;
+      color: #59627a;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: capitalize;
+    }
+    .chip.active { border-color: var(--navy); background: var(--navy); color: white; }
+
+    .toolbar { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+    #count { color: var(--muted); font-size: 11px; }
+    .text-action { border: 0; padding: 4px 0; background: none; color: var(--navy); font-size: 11px; font-weight: 800; }
+
+    #cards { min-height: 0; overflow-y: auto; padding: 12px 14px 24px; }
+
+    .card {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      min-height: 128px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 3px 12px rgba(29, 43, 87, .06);
+      transition: border-color .15s, transform .15s;
+    }
+    .card:hover, .card.active { border-color: var(--gold); transform: translateY(-1px); }
+
+    .card-visual {
+      position: relative;
+      min-height: 128px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-size: 38px;
+      background: linear-gradient(145deg, var(--tint), #17243d);
+    }
+    .card-visual::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(8, 18, 52, .48), transparent 62%); }
+    .card-visual .emoji { position: relative; z-index: 1; }
+    .type-label {
+      position: absolute;
+      z-index: 2;
+      left: 8px;
+      bottom: 8px;
+      max-width: calc(100% - 16px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: white;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .card-body { min-width: 0; padding: 10px 12px; }
+    .card-head { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
+    .card h2 { margin: 0; font-size: 14px; line-height: 1.25; }
+    .distance { flex: none; border-radius: 5px; padding: 3px 6px; background: #eef1ff; color: var(--navy); font-size: 9px; font-weight: 800; }
+    .card-description { margin: 6px 0 8px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+
+    .facts { display: flex; align-items: center; gap: 8px; color: #59627a; font-size: 9px; }
+    .facts b { color: var(--ink); }
+    .approx { color: var(--red); }
+
+    .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 9px; }
+    .card-action {
+      height: 31px;
+      border: 1px solid var(--navy);
+      border-radius: 6px;
+      display: inline-grid;
+      place-items: center;
+      background: white;
+      color: var(--navy);
+      text-decoration: none;
+      font-size: 9px;
+      font-weight: 800;
+    }
+    .card-action.directions { border-color: var(--gold); background: var(--gold); color: var(--navy-2); }
+
+    #map { min-width: 0; min-height: 0; }
+    .leaflet-container { font-family: "Manrope", sans-serif; }
+
+    .marker-pin {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 3px solid white;
+      border-radius: 50%;
+      background: var(--navy);
+      color: white;
+      box-shadow: 0 4px 12px rgba(7, 20, 73, .32);
+      font-size: 15px;
+    }
+
+    .leaflet-popup-content-wrapper { border-radius: 8px; }
+    .leaflet-popup-content { margin: 12px 14px; font-size: 11px; line-height: 1.5; }
+    .leaflet-popup-content h3 { margin: 0 0 3px; color: var(--navy); font-size: 13px; }
+    .leaflet-popup-content a { color: var(--red); font-weight: 800; }
+
+    #ar { position: fixed; inset: 0; z-index: 3000; display: none; background: #05070b; }
+    #cam { width: 100%; height: 100%; object-fit: cover; }
+    #arLayer { position: absolute; inset: 0; pointer-events: none; }
+    .arTag { position: absolute; transform: translate(-50%, -50%); border: 1px solid var(--gold); border-radius: 6px; padding: 7px 9px; background: rgba(7, 20, 73, .92); color: white; text-align: center; white-space: nowrap; font-size: 11px; }
+    .arTag small { display: block; margin-top: 2px; color: var(--gold); }
+    .ar-bar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 12px; color: white; background: linear-gradient(rgba(0,0,0,.62), transparent); font-size: 11px; }
+
+    @media (max-width: 860px) {
+      body { overflow: hidden; }
+      .app { grid-template-rows: 64px minmax(0, 1fr); }
+      header { padding: 8px 10px; }
+      .brand-mark { width: 42px; height: 42px; }
+      .brand h1 { font-size: 14px; }
+      .brand p { font-size: 9px; }
+      .action { width: 38px; padding: 0; }
+      .action span { display: none; }
+      main { grid-template-columns: 1fr; grid-template-rows: 42% 58%; }
+      aside { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+      #map { grid-row: 1; }
+      .controls { padding: 9px 10px 7px; }
+      .chip-row { margin-top: 7px; }
+      #cards { padding: 8px 10px 18px; }
+      .card { grid-template-columns: 92px minmax(0, 1fr); min-height: 116px; }
+      .card-visual { min-height: 116px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand-mark">D</div>
+      <div class="brand">
+        <h1>Dasol Tourism Guide</h1>
+        <p>Pangasinan Explorer</p>
+      </div>
+      <div class="header-actions">
+        <button class="action primary" id="btnLocate" aria-label="Use my location"><b>⌖</b><span>My Location</span></button>
+        <button class="action secondary" id="btnAR" aria-label="Open augmented reality"><b>◎</b><span>AR View</span></button>
+      </div>
+    </header>
+
+    <main>
+      <aside>
+        <div class="controls">
+          <div class="search-wrap"><span>⌕</span><input id="search" class="search" type="search" placeholder="Search destinations"></div>
+          <div class="chip-row" id="chips"></div>
+          <div class="toolbar">
+            <span id="count"></span>
+            <button class="text-action" id="btnSort">Sort by nearest</button>
+          </div>
+        </div>
+        <div id="cards"></div>
+      </aside>
+      <div id="map"></div>
+    </main>
+  </div>
+
+  <div id="ar">
+    <video id="cam" playsinline autoplay muted></video>
+    <div id="arLayer"></div>
+    <div class="ar-bar"><span>Heading <b id="hd">--</b>°</span><button class="action primary" id="arClose">Close</button></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const COLORS = { beach:'#087ca7', island:'#3157a4', cove:'#7458a6', cave:'#4b5563', falls:'#16867b', park:'#4e8d5a' };
+
+    // Coordinates sourced or refined from OpenStreetMap. Items marked approximate
+    // are useful planning points and should be confirmed locally before travel.
+    const SPOTS = [
+      { id:1, name:'Tambobong Beach', type:'beach', icon:'🏖️', lat:15.925633, lng:119.775780, access:'Land', approximate:false, desc:'A broad white-sand beach reached by road through Dasol.', activities:['Swimming','Sunset','Picnic'] },
+      { id:2, name:'Osmeña Point Beach Resort', type:'beach', icon:'🌊', lat:15.923246, lng:119.799771, access:'Land', approximate:false, desc:'Resort beachfront near the western Dasol coast.', activities:['Swimming','Beach walk'] },
+      { id:3, name:'Macalang White Beach', type:'beach', icon:'🌴', lat:15.9215, lng:119.8050, access:'Land', approximate:true, desc:'A quiet coastal stretch east of Osmeña Point.', activities:['Swimming','Camping'] },
+      { id:4, name:'Colibra (Culebra) Island', type:'island', icon:'🏝️', lat:16.0168, lng:119.9158, access:'Boat', approximate:true, desc:'A popular island-hopping stop off the mainland coast.', activities:['Island hopping','Snorkeling'] },
+      { id:5, name:'Villa Balinmanok Beach Resort', type:'beach', icon:'🪨', lat:15.922514, lng:119.802917, access:'Land', approximate:false, desc:'Beach resort setting with nearby shoreline rock formations.', activities:['Photography','Swimming'] },
+      { id:6, name:'Cabacungan Cove', type:'cove', icon:'⛵', lat:15.9380, lng:119.7900, access:'Trek', approximate:true, desc:'Sheltered cove in the coastal area south of Dasol town.', activities:['Kayaking','Swimming','Viewing'] },
+      { id:7, name:'Rongaab Cave', type:'cave', icon:'🦇', lat:15.9720, lng:119.8920, access:'Short trek', approximate:true, desc:'Natural cave and shallow pools reached by a local trail.', activities:['Caving','Photography'] },
+      { id:8, name:'Salabusuban Falls', type:'falls', icon:'💧', lat:15.9640, lng:120.0150, access:'Trek', approximate:true, desc:'Dasol nature attraction reached through inland trails.', activities:['Swimming','Trekking'] },
+      { id:9, name:'Balas Nagtaros Island', type:'island', icon:'🏝️', lat:16.0080, lng:119.9210, access:'Boat', approximate:true, desc:'Island stop associated with Dasol Bay tours.', activities:['Island hopping','Swimming'] },
+      { id:10, name:'Dasoland Family Adventure Park', type:'park', icon:'🎡', lat:15.9880, lng:119.8830, access:'Land', approximate:true, desc:'Family park with leisure lake and animal attractions.', activities:['Family outing','Mini zoo'] },
+      { id:11, name:'Tambobong Adventure', type:'park', icon:'🚲', lat:15.9320, lng:119.7780, access:'Land', approximate:true, desc:'Adventure and eco-tour base serving the Tambobong area.', activities:['Bike tour','Eco tour'] },
+      { id:12, name:'Polo Camaso Islet', type:'island', icon:'🏝️', lat:16.0020, lng:119.9180, access:'Boat', approximate:true, desc:'Small islet included in some island-hopping routes.', activities:['Island hopping','Photography'] },
+      { id:13, name:'Crocodile Island', type:'island', icon:'🐊', lat:16.0270, lng:119.9270, access:'Boat', approximate:true, desc:'A named islet recognized for its crocodile-like outline.', activities:['Island hopping','Photography'] },
+      { id:14, name:'Lagaratas Island', type:'island', icon:'🏝️', lat:16.0120, lng:119.9090, access:'Boat', approximate:true, desc:'Small island on the Dasol Bay island-hopping circuit.', activities:['Island hopping','Snorkeling'] },
+      { id:15, name:'Paratec Beach', type:'beach', icon:'🌅', lat:15.9250, lng:119.8120, access:'Land', approximate:true, desc:'Quiet Dasol coastline between nearby beach resorts.', activities:['Swimming','Beach hopping'] },
+      { id:16, name:'Pao Beach', type:'beach', icon:'🐚', lat:15.9240, lng:119.8150, access:'Land', approximate:true, desc:'Small beach along the eastern Tambobong-Osmeña coast.', activities:['Swimming','Beach hopping'] }
+    ];
+
+    const state = { type:'all', query:'', user:null, sortNear:false, markers:{}, userMarker:null };
+
+    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Imagery © Esri' });
+    const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom:19 });
+    const earth = L.layerGroup([satellite, labels]);
+
+    const map = L.map('map', { layers:[earth], zoomControl:false }).setView([15.970,119.855],11);
+    L.control.zoom({ position:'topright' }).addTo(map);
+    L.control.layers({ 'Earth':earth, 'Map':street }, null, { position:'topright' }).addTo(map);
+    L.control.scale({ position:'bottomleft', imperial:false }).addTo(map);
+
+    const pinIcon = icon => L.divIcon({ className:'', html:`<div class="marker-pin">${icon}</div>`, iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-32] });
+
+    SPOTS.forEach(spot => {
+      state.markers[spot.id] = L.marker([spot.lat, spot.lng], { icon:pinIcon(spot.icon), title:spot.name })
+        .addTo(map)
+        .bindPopup(`<h3>${spot.name}</h3>${spot.desc}<br><small>${spot.approximate ? 'Approximate location • ' : ''}${spot.access}</small><br><a href="https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}" target="_blank">Open directions ↗</a>`)
+        .on('click', () => highlight(spot.id));
+    });
+
+    map.on('click', e => {
+      L.marker(e.latlng, { icon:pinIcon('⌖') }).addTo(map).bindPopup(`${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}<br><a target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${e.latlng.lat},${e.latlng.lng}">Directions ↗</a>`).openPopup();
+    });
+
+    const rad = value => value * Math.PI / 180;
+    function distance(a, b, c, d) {
+      const x = Math.sin(rad(c-a)/2)**2 + Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(rad(d-b)/2)**2;
+      return 12742 * Math.asin(Math.sqrt(x));
+    }
+    const distanceTo = spot => state.user ? distance(state.user.lat, state.user.lng, spot.lat, spot.lng) : null;
+
+    function visibleSpots() {
+      let list = SPOTS.filter(spot =>
+        (state.type === 'all' || spot.type === state.type) &&
+        `${spot.name} ${spot.desc} ${spot.type}`.toLowerCase().includes(state.query)
+      );
+      if (state.sortNear && state.user) list.sort((a,b) => distanceTo(a) - distanceTo(b));
+      return list;
+    }
+
+    const TYPES = ['all','beach','island','cove','cave','falls','park'];
+    document.getElementById('chips').innerHTML = TYPES.map(type => `<button class="chip ${type==='all'?'active':''}" data-type="${type}">${type === 'all' ? 'All' : type}</button>`).join('');
+
+    document.getElementById('chips').addEventListener('click', event => {
+      const type = event.target.dataset.type;
+      if (!type) return;
+      state.type = type;
+      document.querySelectorAll('.chip').forEach(chip => chip.classList.toggle('active', chip.dataset.type === type));
+      render();
+    });
+
+    document.getElementById('search').addEventListener('input', event => { state.query = event.target.value.trim().toLowerCase(); render(); });
+
+    function render() {
+      const list = visibleSpots();
+      document.getElementById('count').textContent = `${list.length} destination${list.length === 1 ? '' : 's'}`;
+      document.getElementById('cards').innerHTML = list.map(spot => {
+        const km = distanceTo(spot);
+        return `<article class="card" id="card-${spot.id}" data-id="${spot.id}">
+          <div class="card-visual" style="--tint:${COLORS[spot.type]}"><span class="emoji">${spot.icon}</span><span class="type-label">${spot.type}</span></div>
+          <div class="card-body">
+            <div class="card-head"><h2>${spot.name}</h2>${km !== null ? `<span class="distance">${km.toFixed(1)} km</span>` : ''}</div>
+            <p class="card-description">${spot.desc}</p>
+            <div class="facts"><span>Access <b>${spot.access}</b></span>${spot.approximate ? '<span class="approx">Approx. map point</span>' : ''}</div>
+            <div class="card-actions">
+              <button class="card-action" data-view="${spot.id}">View on map</button>
+              <a class="card-action directions" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}">Directions</a>
+            </div>
+          </div>
+        </article>`;
+      }).join('') || '<p style="padding:16px;color:#747d91;font-size:12px">No destinations found.</p>';
+
+      SPOTS.forEach(spot => {
+        if (list.some(item => item.id === spot.id)) state.markers[spot.id].addTo(map);
+        else map.removeLayer(state.markers[spot.id]);
+      });
+    }
+
+    function highlight(id) {
+      document.querySelectorAll('.card').forEach(card => card.classList.toggle('active', card.dataset.id === String(id)));
+      const card = document.getElementById(`card-${id}`);
+      if (card) card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+
+    document.getElementById('cards').addEventListener('click', event => {
+      const view = event.target.closest('[data-view]');
+      if (view) {
+        const spot = SPOTS.find(item => item.id === Number(view.dataset.view));
+        map.flyTo([spot.lat, spot.lng], 15, { duration:1 });
+        state.markers[spot.id].openPopup();
+        highlight(spot.id);
+        return;
+      }
+      const card = event.target.closest('.card');
+      if (card) {
+        const spot = SPOTS.find(item => item.id === Number(card.dataset.id));
+        map.flyTo([spot.lat, spot.lng], 14, { duration:1 });
+        state.markers[spot.id].openPopup();
+        highlight(spot.id);
+      }
+    });
+
+    function locate(callback) {
+      if (!navigator.geolocation) return alert('Location is not supported on this device.');
+      navigator.geolocation.watchPosition(position => {
+        const first = !state.user;
+        state.user = { lat:position.coords.latitude, lng:position.coords.longitude };
+        if (!state.userMarker) {
+          state.userMarker = L.circleMarker([state.user.lat, state.user.lng], { radius:9, color:'#fff', weight:3, fillColor:'#2474d8', fillOpacity:1 }).addTo(map).bindPopup('You are here');
+        } else state.userMarker.setLatLng([state.user.lat, state.user.lng]);
+        if (first) map.flyTo([state.user.lat, state.user.lng], 12, { duration:1 });
+        if (callback) callback();
+        render();
+      }, () => alert('Location unavailable. Allow location access and open the guide over HTTPS.'), { enableHighAccuracy:true, maximumAge:10000 });
+    }
+
+    document.getElementById('btnLocate').addEventListener('click', () => locate());
+    document.getElementById('btnSort').addEventListener('click', event => {
+      if (!state.user) return locate(() => { state.sortNear=true; event.target.textContent='Show original order'; render(); });
+      state.sortNear = !state.sortNear;
+      event.target.textContent = state.sortNear ? 'Show original order' : 'Sort by nearest';
+      render();
+    });
+
+    let arOn=false;
+    let stream=null;
+    let heading=0;
+
+    function orientationHeading(event) {
+      heading = event.webkitCompassHeading != null ? event.webkitCompassHeading : (event.alpha != null ? (360-event.alpha)%360 : heading);
+      document.getElementById('hd').textContent = Math.round(heading);
+    }
+
+    function drawAR() {
+      if (!arOn) return;
+      if (!state.user) return;
+      const layer = document.getElementById('arLayer');
+      const width = layer.clientWidth;
+      const height = layer.clientHeight;
+      let html = '';
+      SPOTS.forEach(spot => {
+        const userToSpot = distance(state.user.lat, state.user.lng, spot.lat, spot.lng);
+        const y1 = rad(state.user.lat), y2 = rad(spot.lat);
+        const dx = rad(spot.lng-state.user.lng);
+        const bearing = (Math.atan2(Math.sin(dx)*Math.cos(y2), Math.cos(y1)*Math.sin(y2)-Math.sin(y1)*Math.cos(y2)*Math.cos(dx))*180/Math.PI+360)%360;
+        const relative = (bearing-heading+540)%360-180;
+        if (Math.abs(relative) < 32.5) {
+          html += `<div class="arTag" style="left:${width/2+relative/65*width}px;top:${Math.min(height*.68,height*.38+Math.min(userToSpot,15)*5)}px">${spot.icon} ${spot.name}<small>${userToSpot.toFixed(1)} km</small></div>`;
+        }
+      });
+      layer.innerHTML = html || '<div class="arTag" style="left:50%;top:50%">No destinations in this direction</div>';
+      requestAnimationFrame(drawAR);
+    }
+
+    document.getElementById('btnAR').addEventListener('click', async () => {
+      if (!state.user) {
+        locate();
+        return alert('Getting your location. Open AR again in a few seconds.');
+      }
+      try {
+        if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission();
+        stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+        document.getElementById('cam').srcObject = stream;
+        window.addEventListener('deviceorientationabsolute', orientationHeading, true);
+        window.addEventListener('deviceorientation', orientationHeading, true);
+        document.getElementById('ar').style.display = 'block';
+        arOn = true;
+        drawAR();
+      } catch (error) {
+        alert('Camera or compass unavailable. Open this page over HTTPS and allow permissions.');
+      }
+    });
+
+    document.getElementById('arClose').addEventListener('click', () => {
+      arOn=false;
+      document.getElementById('ar').style.display='none';
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      window.removeEventListener('deviceorientationabsolute', orientationHeading, true);
+      window.removeEventListener('deviceorientation', orientationHeading, true);
+    });
+
+    render();
+  </script>
+</body>
+</html>
