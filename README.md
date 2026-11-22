@@ -1,1 +1,0 @@
-# dasol-tourism-guide
